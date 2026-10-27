@@ -174,15 +174,41 @@ input, select, textarea { font-family: inherit; font-size: inherit; color: inher
   display: grid;
   grid-template-columns: var(--sidebar-w) 1fr;
   min-height: 100vh;
+  width: 100%;
+  /* Prevent any child from blowing out the grid */
+  overflow-x: hidden;
 }
 .app.has-insights { grid-template-columns: var(--sidebar-w) 1fr var(--insights-w); }
 
+/* The sidebar backdrop must NEVER participate in grid layout at any viewport size.
+   It is always either hidden or a fixed overlay — never a grid item.
+   Using position:fixed + display:none at non-mobile sizes. */
+.sidebar-backdrop {
+  /* Hidden by default everywhere.
+     At mobile sizes, the mobile media query enables it as a fixed overlay. */
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  background: rgba(28,26,23,0.3);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t);
+}
+
 /* ---------- Sidebar ---------- */
 .sidebar {
+  /* Explicit grid placement: always column 1, never auto-placed to wrong column */
+  grid-column: 1;
+  grid-row: 1;
   position: sticky;
   top: 0;
   align-self: start;
+  /* Explicit width = grid column width, so sidebar never overflows its track */
+  width: var(--sidebar-w);
   height: 100vh;
+  /* Clip any content that could otherwise widen the column */
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: var(--s-5);
@@ -272,17 +298,16 @@ input, select, textarea { font-family: inherit; font-size: inherit; color: inher
 .sidebar.collapsed .sidebar-footer { display: none; }
 .sidebar.collapsed .nav-foot-note { display: none; }
 
-/* ---------- Sidebar backdrop (always fixed, never a grid item) ---------- */
-.sidebar-backdrop {
-  position: fixed; inset: 0; z-index: 39;
-  background: rgba(28,26,23,0.3);
-  opacity: 0; pointer-events: none;
-  transition: opacity var(--t);
-}
-.sidebar-backdrop.show { opacity: 1; pointer-events: auto; }
-
 /* ---------- Main column ---------- */
-.main-col { display: flex; flex-direction: column; min-width: 0; }
+.main-col {
+  /* Explicit grid placement: always column 2, spanning to end */
+  grid-column: 2 / -1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  /* min-width:0 is essential in grid to prevent content from overflowing the column */
+  min-width: 0;
+}
 
 /* Header */
 .app-header {
@@ -803,7 +828,9 @@ body.quiet-mode .countdown-card, body.quiet-mode .session-item { transition: non
 @media (max-width: 1024px) {
   .app { grid-template-columns: var(--sidebar-w-compact) 1fr; }
   .app.has-insights { grid-template-columns: var(--sidebar-w-compact) 1fr; }
-  .sidebar { padding: var(--s-5) var(--s-3); }
+  /* Explicitly set sidebar width to match the compact column — prevents overflow */
+  .sidebar { width: var(--sidebar-w-compact); padding: var(--s-5) var(--s-3); }
+  .sidebar.collapsed { width: var(--sidebar-w-compact); }
   .sidebar:not(.collapsed) .brand-text,
   .sidebar:not(.collapsed) .nav-item .nav-label,
   .sidebar:not(.collapsed) .sidebar-footer { display: none; }
@@ -816,18 +843,26 @@ body.quiet-mode .countdown-card, body.quiet-mode .session-item { transition: non
   :root { --sidebar-w: 260px; }
   .app { grid-template-columns: 1fr; }
   .app.has-insights { grid-template-columns: 1fr; }
+  /* On mobile, sidebar is a fixed overlay — removed from grid flow.
+     grid-column assignment is irrelevant since the grid is 1fr only,
+     but keep it for clarity. main-col then spans the full single column. */
   .sidebar {
     position: fixed; left: 0; top: 0; width: var(--sidebar-w); height: 100vh;
     transform: translateX(-100%); transition: transform var(--t-slow);
     box-shadow: var(--shadow-lg);
+    /* Override the grid-column assignment — sidebar is out of grid flow */
+    grid-column: auto;
   }
   .sidebar.open { transform: translateX(0); }
+  .main-col { grid-column: 1 / -1; }
   .sidebar:not(.collapsed) .brand-text,
   .sidebar:not(.collapsed) .nav-item .nav-label,
   .sidebar:not(.collapsed) .sidebar-footer { display: revert; }
   .sidebar.collapsed .brand-text { display: none; }
   .sidebar.collapsed .nav-item .nav-label { display: none; }
   .sidebar.collapsed .sidebar-footer { display: none; }
+  /* Backdrop: make it interactable at mobile. Still position:fixed, never in grid flow. */
+  .sidebar-backdrop { display: block; }
   .sidebar-backdrop.show { opacity: 1; pointer-events: auto; }
   .content { padding: var(--s-5) var(--s-4) var(--s-10); }
   .app-header { padding: 0 var(--s-4); }
@@ -1632,11 +1667,6 @@ var PocketHours = (() => {
         }
         /* ---------- shared loop & visibility ---------- */
         _loop() {
-          if (typeof document === "undefined" || !document.body) {
-            this._stopLoop();
-            this.running = false;
-            return;
-          }
           if (this.mode === "stopwatch" && this.running) {
             const e = this._swElapsed();
             if (this._lastSec !== e) {
@@ -3763,5 +3793,5 @@ Choose "Merge" to add to your existing data, or "Replace" to start fresh with th
 document.getElementById('app-root').innerHTML = '<div style="padding:2rem;font-family:sans-serif;color:#2e2b27;max-width:520px;margin:4rem auto;line-height:1.6"><h2 style="font-family:Georgia,serif;margin-bottom:.5rem">Pocket Hours could not start</h2><p>The app code could not be loaded. Please try refreshing the page.</p></div>';
     }
   </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a51095e77b3ad97b',t:'MTc5MzA5MjQxNA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
