@@ -177,6 +177,9 @@ input, select, textarea { font-family: inherit; font-size: inherit; color: inher
 }
 .app.has-insights { grid-template-columns: var(--sidebar-w) 1fr var(--insights-w); }
 
+/* The sidebar backdrop must never become a normal grid column on tablet/desktop. */
+.sidebar-backdrop { display: none; }
+
 /* ---------- Sidebar ---------- */
 .sidebar {
   position: sticky;
@@ -819,7 +822,7 @@ body.quiet-mode .countdown-card, body.quiet-mode .session-item { transition: non
   .sidebar.collapsed .brand-text { display: none; }
   .sidebar.collapsed .nav-item .nav-label { display: none; }
   .sidebar.collapsed .sidebar-footer { display: none; }
-  .sidebar-backdrop { position: fixed; inset: 0; z-index: 39; background: rgba(28,26,23,0.3); opacity: 0; pointer-events: none; transition: opacity var(--t); }
+  .sidebar-backdrop { display: block; position: fixed; inset: 0; z-index: 39; background: rgba(28,26,23,0.3); opacity: 0; pointer-events: none; transition: opacity var(--t); }
   .sidebar-backdrop.show { opacity: 1; pointer-events: auto; }
   .content { padding: var(--s-5) var(--s-4) var(--s-10); }
   .app-header { padding: 0 var(--s-4); }
